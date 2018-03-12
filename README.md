@@ -7,7 +7,7 @@ Presentation date: Mar 22, 7PM - 10PM at CSE 1242
 
 Here is the documentation for the project:
 
-1. Project proposal link [here](https://www.sharelatex.com/read/fmgnkxvwgjvb)  
+1. Project proposal [here](https://www.sharelatex.com/read/fmgnkxvwgjvb)  
 2. Progress report [here](https://www.sharelatex.com/read/hjxfxgxqtchq)
 3. Related Works 
   * One Shot Model (MN): [One Shot Matching Network](https://arxiv.org/abs/1606.04080)  
@@ -26,5 +26,5 @@ Here is the documentation for the project:
 
   * Tianyi Wu:  NLP
   * Yuan Gao:  NLP
-  * Techit Limtiyakul  Modeling
-  * Nurbergen Yermakhanov  Modeling
+  * Techit Limtiyakul:  Modeling
+  * Nurbergen Yermakhanov:  Modeling
