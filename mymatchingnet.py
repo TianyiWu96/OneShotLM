@@ -31,10 +31,10 @@ class CNN_Classifier(nn.Module):
 
 class Linear(nn.Module):
     
-    def __init__(self, lev=0,act=F.sigmoid,in_size=1024, mem_size=1024,out_size=1024,):
+    def __init__(self, lev,act,in_size, mem_size,out_size):
         super(Linear, self).__init__()
-        self.w = Variable(torch.ones(in_size, out_size), requires_grad=True).cuda()
-        self.u = Variable(torch.ones(mem_size, out_size), requires_grad=True).cuda()
+        self.w = Variable(torch.ones(out_size, in_size), requires_grad=True).cuda()
+        self.u = Variable(torch.ones(out_size, mem_size), requires_grad=True).cuda()
         self.b = Variable(torch.zeros(out_size), requires_grad=True).cuda()
         nn.init.xavier_uniform(self.w.data)
         nn.init.xavier_uniform(self.u.data)
@@ -58,30 +58,28 @@ class Linear(nn.Module):
         
 class LSTM(nn.Module):
 
-    def __init__(self, in_size=1024, num_img=21, mem_size=1024):
+    def __init__(self, num_seq, in_size, mem_size,out_size):
         super(LSTM, self).__init__()
-        self.num_img = num_img
-        self.mem_size = mem_size
-        self.fNN=Linear(3)
-        self.iNN=Linear(3)
-        self.oNN=Linear(4,F.tanh)
-        self.cNN=Linear(3,F.tanh)
-        self.in_c = Variable(torch.zeros( self.mem_size), requires_grad=True).cuda()
+        self.num_seq = num_seq
+        self.fNN=Linear(3,F.sigmoid, in_size, mem_size, mem_size)
+        self.iNN=Linear(3,F.sigmoid, in_size, mem_size, mem_size)
+        self.oNN=Linear(4,F.tanh, in_size, mem_size, out_size)
+        self.cNN=Linear(3,F.tanh, in_size, mem_size, mem_size)
+        self.in_c = Variable(torch.zeros(mem_size), requires_grad=True).cuda()
         
     def forward(self, input):
         h = []
         _c = self.in_c.unsqueeze(0).expand(input[0].shape[0],-1)
-        for i in range(self.num_img):
+        for i in range(self.num_seq):
             ft = self.fNN.forward(input[i],_c)
             it = self.iNN.forward(input[i],_c)
             _LSTM__F = self.cNN.forward(input[i],_c)
             ct = ft * _c + it * _LSTM__F
             _c= ct
             #print(ct.shape,_c.shape,ft.shape)
-        for i in range(self.num_img):
+        for i in range(self.num_seq):
             ot = self.oNN.forward(input[i],_c)
             h.append(ot)
-
         return h
         
 class MatchingNetwork(nn.Module):
@@ -114,10 +112,10 @@ class MatchingNetwork(nn.Module):
         
 class unbatched_Linear(nn.Module):
     
-    def __init__(self, lev=0,act=F.sigmoid,in_size=1024, mem_size=1024,out_size=1024,):
-        super(Linear, self).__init__()
-        self.w = Variable(torch.ones(in_size, out_size), requires_grad=True).cuda()
-        self.u = Variable(torch.ones(mem_size, out_size), requires_grad=True).cuda()
+    def __init__(self, lev,act,in_size, mem_size,out_size):
+        super(unbatched_Linear, self).__init__()
+        self.w = Variable(torch.ones(out_size,in_size), requires_grad=True).cuda()
+        self.u = Variable(torch.ones(out_size,mem_size), requires_grad=True).cuda()
         self.b = Variable(torch.zeros(out_size), requires_grad=True).cuda()
         nn.init.xavier_uniform(self.w.data)
         nn.init.xavier_uniform(self.u.data)
@@ -131,54 +129,52 @@ class unbatched_Linear(nn.Module):
             nn.init.xavier_uniform(self.wl[i].data)
         
     def forward(self, input,_c):
-        _w = self.w.mm(input.unsqueeze(2)).squeeze(-1)
-        _u = self.u.mm(input.unsqueeze(2)).squeeze(-1)
+        _w = self.w.mm(input.unsqueeze(1)).squeeze(-1)
+        _u = self.u.mm(_c.unsqueeze(1)).squeeze(-1)
         _out = self.act(_w + _u + self.b)
         for i in range(self.lev):
-            _w = self.wl[i].mm(_out.unsqueeze(2)).squeeze(-1)    
+            _w = self.wl[i].mm(_out.unsqueeze(1)).squeeze(-1)    
             _out = F.relu(_w+self.bl[i])
         return _out
         
-class MyEmbedding(nn.Module)
+class MyEmbedding(nn.Module):
 
     def __init__(self,num_word=10000,num_dim=500):
         super(MyEmbedding, self).__init__()
-        self.Emb=nn.Embedding(num_word,num_dim)
+        self.Emb=nn.Embedding(num_word,num_dim).cuda()
         self.word2id={}
-        self.word2id[''<blank_token>'']=1
+        self.word2id['<blank_token>']=1
         self.num_id=1
     
     def forward(self, input,use_blank=True):
         # input :  {list of word including answer and blank} 
         output=[]
         for k in range(len(input)):
-            if input[k]=='<blank_token>' and use_blank:
+            if input[k]=="<blank_token>" and use_blank:
                 word=input[len(input)-1]
             else:
                 word=input[k]
-            if not self.word2id.has_key(word):
+            if not word in self.word2id:
                 self.num_id+=1
-                word2id[word]=self.num_id;
+                self.word2id[word]=self.num_id;
             if k!=len(input)-1:
-                output.append(word2id[word])
-        output=torch.from_numpy(np.array(output))
-        return output,self.Emb.input(output)
+                output.append(self.word2id[word])
+        _output=Variable(torch.LongTensor(output)).cuda()
+        return output,self.Emb(_output)
 
 class EnvLSTM(nn.Module):
 
-    def __init__(self, in_size=1024, mem_size=1024,out_size=1024):
+    def __init__(self, in_size, mem_size,out_size):
         super(EnvLSTM, self).__init__()
-        self.num_img = num_img
-        self.fNNL=unbatched_Linear(0,F.sigmoid,in_size,mem_size,out_size)
-        self.iNNL=unbatched_Linear(0,F.sigmoid,in_size,mem_size,out_size)
-        self.oNNL=unbatched_Linear(0,F.tanh,mem_size,mem_size,out_size)
-        self.cNNL=unbatched_Linear(0,F.tanh,in_size,mem_size,out_size)
-        self.in_cL = Variable(torch.zeros(self.mem_size), requires_grad=True).cuda()
-        self.fNNR=unbatched_Linear(0,F.sigmoid,in_size,mem_size,out_size)
-        self.iNNR=unbatched_Linear(0,F.sigmoid,in_size,mem_size,out_size)
-        self.oNNR=unbatched_Linear(0,F.tanh,mem_size,mem_size,out_size)
-        self.cNNR=unbatched_Linear(0,F.tanh,in_size,mem_size,out_size)
-        self.in_cR = Variable(torch.zeros(self.mem_size), requires_grad=True).cuda()
+        self.fNNL=unbatched_Linear(0,F.sigmoid,in_size,mem_size,mem_size)
+        self.iNNL=unbatched_Linear(0,F.sigmoid,in_size,mem_size,mem_size)
+        self.cNNL=unbatched_Linear(0,F.tanh,in_size,mem_size,mem_size)
+        self.in_cL = Variable(torch.zeros(mem_size), requires_grad=True).cuda()
+        self.fNNR=unbatched_Linear(0,F.sigmoid,in_size,mem_size,mem_size)
+        self.iNNR=unbatched_Linear(0,F.sigmoid,in_size,mem_size,mem_size)
+        self.cNNR=unbatched_Linear(0,F.tanh,in_size,mem_size,mem_size)
+        self.oNN=unbatched_Linear(0,F.tanh,mem_size,mem_size,out_size)
+        self.in_cR = Variable(torch.zeros(mem_size), requires_grad=True).cuda()
         
     def forward(self, input):
         #input is list : len_sentence*num_emb
@@ -188,15 +184,15 @@ class EnvLSTM(nn.Module):
         for i in range(input.data.shape[0]):
             ft = self.fNNL.forward(input[i],_c)
             it = self.iNNL.forward(input[i],_c)
-            _LSTM__F = self.cNN.forward(input[i],_c)
+            _LSTM__F = self.cNNL.forward(input[i],_c)
             Lenv.append(_c)
             _c=ft * _c + it * _LSTM__F
         Renv=[]
-        _c = self.in_cR.unsqueeze(0).expand(input[0].shape[0],-1)
-        for i in range(input.data.shape[1]-1,0,-1):
+        _c = self.in_cR
+        for i in range(input.data.shape[0]-1,-1,-1):
             ft = self.fNNR.forward(input[i],_c)
             it = self.iNNR.forward(input[i],_c)
-            _LSTM__F = self.cNN.forward(input[i],_c)
+            _LSTM__F = self.cNNR.forward(input[i],_c)
             Renv.append(_c)
             _c=ft * _c + it * _LSTM__F
         
@@ -206,51 +202,53 @@ class EnvLSTM(nn.Module):
         #output is len_sentence_*num_feat
         return h
 
-class matching_net_nlp(nn.Module)
+class matching_net_nlp(nn.Module):
 
-    def __init__(self):
+    def __init__(self,num_ways):
         super(matching_net_nlp, self).__init__()
-        self.emb = MyEmbedding(10000,500)
-        self.lstm = EnvLSTM(500,1000,500)
+        self.emb = MyEmbedding(10000,50)
+        self.envlstm = EnvLSTM(50,1000,100)
+        self.lstm = LSTM(num_ways,100,1000,200)
         
-    def forward_slow(self, support_set, target,use_train=True,fce=False):
+    def forward(self, support_set, target,fce=False):
         # support_set list : batch_size * sequence_size * {list of word including answer and blank} 
         # target_set list : batch_size * sequence_size * {list of word including answer and blank}
         _support_set=[]
-        _support_id=[]
+        # _support_set list :  sequence_size * stack(batch_size * env_size)
         for j in range(len(support_set[0])):
             _support_set.append([])
-            _support_id.append([])
             for i in range(len(support_set)):
-                id,emb=emb(support_set[i][j],use_blank=False)
-                env=EnvLSTM(emb)
+                id,emb=self.emb(support_set[i][j],use_blank=False)
+                env=self.envlstm(emb)
                 blank_env=0
                 for k in range(len(support_set[i][j])):
-                    if support_set[i][j][k]=='<blank_token>':
+                    if support_set[i][j][k]=="<blank_token>":
                         blank_env=env[k]
-                        blank_id=id[k]
                         break
                 _support_set[j].append(blank_env)
-                _support_id[j].append(blank_id)
             _support_set[j]=torch.stack(_support_set[j])
         _target=[]
         target_y=[]
         for i in range(len(target)):
-            id,emb=emb(target[i],use_blank=False)
-            env=EnvLSTM(emb)
+            id,emb=self.emb(target[i],use_blank=False)
+            env=self.envlstm(emb)
             blank_env=0
             for k in range(len(target[i])):
-                if target[i][k]=='<blank_token>':
+                if target[i][k]=="<blank_token>":
                     blank_env=env[k]
-                    blank_id=id[k]
                     break
             _target.append(blank_env)
             blank_ans=-1
             for j in range(len(support_set[0])):
-                if _support_id[j][i]==blank_id:
+                if support_set[i][j][len(support_set[i][j])-1]==target[i][len(target[i])-1]:
                     blank_ans=j
                     break
             target_y.append(blank_ans)
+            #print(i,blank_ans)
+            #print(' '.join(target[i]))
+            #print(' '.join(support_set[i][blank_ans]))
+            
+        target_y=Variable(torch.LongTensor(target_y)).cuda()
         _target=torch.stack(_target)
         
         x = _support_set
@@ -261,7 +259,7 @@ class matching_net_nlp(nn.Module)
             y = x[len(x) - 1]
             x = x[0:len(x) - 1]
         z = []
-        for i in range(support_set.data.shape[1]):
+        for i in range(len(support_set[0])):
             z.append(x[i].unsqueeze(1).bmm(y.unsqueeze(2)) * torch.rsqrt(x[i].unsqueeze(1).bmm(x[i].unsqueeze(2))))
 
         z = torch.stack(z).squeeze(-1).squeeze(-1).t()
