@@ -11,7 +11,7 @@ import numpy as np
 class TreeBankDataset():
     def __init__(self, batch_size, classes_per_set=20, samples_per_class=1, seed=2017, shuffle=True, use_cache=True):
         np.random.seed(seed)
-        self.x = np.load('dataset.npy')
+        self.x = np.load('data/dataset.npy')
         self.x = self._process_vocabs(self.x)
         self.x = np.reshape(self.x, newshape=(-1,10)) 
         if shuffle:
