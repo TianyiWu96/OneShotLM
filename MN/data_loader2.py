@@ -17,7 +17,7 @@ class TreeBankDataset():
         if shuffle:
             np.random.shuffle(self.x)
         self.x_train, self.x_val, self.x_test = self.x[:900], self.x[900:1000], self.x[1000:]
-        print(self.x_train.shape)
+        #print(self.x_train.shape)
         self.batch_size = batch_size # batch = 20
         self.n_classes = self.x.shape[0] # total classes
         self.classes_per_set = classes_per_set # 20 way
@@ -25,7 +25,7 @@ class TreeBankDataset():
         self.indexes = {"train": 0, "val": 0, "test": 0}
         self.dataset = {"train": self.x_train, "val": self.x_val, "test": self.x_test}
         self.use_cache = use_cache
-        print(self.x_train.shape)
+        #print(self.x_train.shape)
         if self.use_cache:
             self.cached_dataset = {"train": self.load_data_cache(self.x_train),
                                     "val": self.load_data_cache(self.x_val),
@@ -60,9 +60,12 @@ class TreeBankDataset():
         else:
             print("use_cache = false not yet implemented")
             return
-
-        support_set_x = support_set_x.reshape((support_set_x.shape[0], support_set_x.shape[1] * support_set_x.shape[2], self.maxlen))
-        support_set_y = support_set_y.reshape(support_set_y.shape[0], support_set_y.shape[1] * support_set_y.shape[2])
+        support_set_x = np.array(support_set_x)
+        support_set_y = np.array(support_set_y)
+        target_x = np.array(target_x)
+        target_y = np.array(target_y)
+        support_set_x = support_set_x.reshape((support_set_x.shape[0], support_set_x.shape[1] * support_set_x.shape[2]))
+        #support_set_y = support_set_y.reshape(support_set_y.shape[0], support_set_y.shape[1] * support_set_y.shape[2])
         return support_set_x, support_set_y, target_x, target_y
 
     def get_train_batch(self):
