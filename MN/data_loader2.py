@@ -23,7 +23,7 @@ class TreeBankDataset():
         self.classes_per_set = classes_per_set # 20 way
         self.samples_per_class = samples_per_class # 1 shot
         self.indexes = {"train": 0, "val": 0, "test": 0}
-        self.datatset = {"train": self.x_train, "val": self.x_val, "test": self.x_test}
+        self.dataset = {"train": self.x_train, "val": self.x_val, "test": self.x_test}
         self.use_cache = use_cache
         print(self.x_train.shape)
         if self.use_cache:
@@ -108,10 +108,10 @@ class TreeBankDataset():
         """
         
         """ 
-        if self.indexes[dataset_name] >= len(self.cached_datatset[dataset_name]):
+        if self.indexes[dataset_name] >= len(self.cached_dataset[dataset_name]):
             self.indexes[dataset_name] = 0
-            self.cached_datatset[dataset_name] = self.load_data_cache(self.datatset[dataset_name])
-        next_batch = self.cached_datatset[dataset_name][self.indexes[dataset_name]] # load the next batch based on the last index
+            self.cached_dataset[dataset_name] = self.load_data_cache(self.dataset[dataset_name])
+        next_batch = self.cached_dataset[dataset_name][self.indexes[dataset_name]] # load the next batch based on the last index
         self.indexes[dataset_name] += 1
         x_support_set, y_support_set, x_target, y_target = next_batch
         return x_support_set, y_support_set, x_target, y_target
