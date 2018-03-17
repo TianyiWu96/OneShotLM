@@ -76,7 +76,6 @@ class LSTM(nn.Module):
             _LSTM__F = self.cNN.forward(input[i],_c)
             ct = ft * _c + it * _LSTM__F
             _c= ct
-            #print(ct.shape,_c.shape,ft.shape)
         for i in range(self.num_seq):
             ot = self.oNN.forward(input[i],_c)
             h.append(ot)
@@ -156,7 +155,7 @@ class MyEmbedding(nn.Module):
                 word=input[k]
             if not word in self.word2id:
                 self.num_id+=1
-                self.word2id[word]=self.num_id;
+                self.word2id[word]=self.num_id
             if k!=len(input)-1 or not has_blank:
                 output.append(self.word2id[word])
         _output=Variable(torch.LongTensor(output)).cuda()
@@ -206,21 +205,26 @@ class matching_net_nlp(nn.Module):
 
     def __init__(self,num_ways):
         super(matching_net_nlp, self).__init__()
-        self.emb = MyEmbedding(13000,100)
-        self.envlstm = EnvLSTM(100,500,100)
-        self.lstm = LSTM(num_ways,100,200,100)
+        self.emb = MyEmbedding(13000,200)
+        self.envlstm = EnvLSTM(200,500,200)
+        self.lstm = LSTM(num_ways,200,500,200)
         
     def forward_quick(self, support_set):
         # support_set list: batch_size *  {list of word}
         loss=Variable(torch.FloatTensor([0])).cuda()
+        totlen=0
         for i in range(len(support_set)):
             id,emb=self.emb(support_set[i],False,False)
             env=self.envlstm(emb)
-            for k in range(len(support_set[i])):
-                loss+=Variable(torch.FloatTensor([1])).cuda()-env[k].dot(emb[k]) * torch.rsqrt(env[k].dot(env[k])*emb[k].dot(emb[k]))
-        return loss/Variable(torch.FloatTensor([len(support_set)])).cuda()
+            emb=torch.stack(emb)
+            env=torch.stack(env)
+            x=env.unsqueeze(1).bmm(emb.unsqueeze(2)) * torch.rsqrt(env.unsqueeze(1).bmm(env.unsqueeze(2))*emb.unsqueeze(1).bmm(emb.unsqueeze(2)))
+            loss-=torch.sum(x)
+            totlen+=len(support_set[i])
+        return 1.0+loss/totlen
         
-    def forward(self, support_set, target,fce=False):
+        
+    def forward(self, support_set, target,fce):
         # support_set list : batch_size * sequence_size * {list of word including answer and blank} 
         # target_set list : batch_size * sequence_size * {list of word including answer and blank}
         _support_set=[]
@@ -254,9 +258,6 @@ class matching_net_nlp(nn.Module):
                     blank_ans=j
                     break
             target_y.append(blank_ans)
-            #print(i,blank_ans)
-            #print(' '.join(target[i]))
-            #print(' '.join(support_set[i][blank_ans]))
             
         target_y=Variable(torch.LongTensor(target_y)).cuda()
         _target=torch.stack(_target)
@@ -270,8 +271,7 @@ class matching_net_nlp(nn.Module):
             x = x[0:len(x) - 1]
         z = []
         for i in range(len(support_set[0])):
-            z.append(x[i].unsqueeze(1).bmm(y.unsqueeze(2)) * torch.rsqrt(x[i].unsqueeze(1).bmm(x[i].unsqueeze(2))*y.unsqueeze(1).bmm(y.unsqueeze(2))))
-
+            z.append(x[i].unsqueeze(1).bmm(y.unsqueeze(2)) * torch.rsqrt(x[i].unsqueeze(1).bmm(x[i].unsqueeze(2))*y.unsqueeze(1).bmm(y.unsqueeze(2)))*10)
         z = torch.stack(z).squeeze(-1).squeeze(-1).t()
         output = F.softmax(z, dim=1)
         values, indices = output.max(1)
