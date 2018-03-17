@@ -61,10 +61,10 @@ class LSTM(nn.Module):
     def __init__(self, num_seq, in_size, mem_size,out_size):
         super(LSTM, self).__init__()
         self.num_seq = num_seq
-        self.fNN=Linear(3,F.sigmoid, in_size, mem_size, mem_size)
-        self.iNN=Linear(3,F.sigmoid, in_size, mem_size, mem_size)
-        self.oNN=Linear(4,F.tanh, in_size, mem_size, out_size)
-        self.cNN=Linear(3,F.tanh, in_size, mem_size, mem_size)
+        self.fNN=Linear(0,F.sigmoid, in_size, mem_size, mem_size)
+        self.iNN=Linear(0,F.sigmoid, in_size, mem_size, mem_size)
+        self.oNN=Linear(0,F.tanh, in_size, mem_size, out_size)
+        self.cNN=Linear(0,F.tanh, in_size, mem_size, mem_size)
         self.in_c = Variable(torch.zeros(mem_size), requires_grad=True).cuda()
         
     def forward(self, input):
@@ -139,14 +139,14 @@ class unbatched_Linear(nn.Module):
         
 class MyEmbedding(nn.Module):
 
-    def __init__(self,num_word=10000,num_dim=500):
+    def __init__(self,num_word,num_dim):
         super(MyEmbedding, self).__init__()
         self.Emb=nn.Embedding(num_word,num_dim).cuda()
         self.word2id={}
         self.word2id['<blank_token>']=1
         self.num_id=1
     
-    def forward(self, input,use_blank=True):
+    def forward(self, input,use_blank,has_blank):
         # input :  {list of word including answer and blank} 
         output=[]
         for k in range(len(input)):
@@ -157,7 +157,7 @@ class MyEmbedding(nn.Module):
             if not word in self.word2id:
                 self.num_id+=1
                 self.word2id[word]=self.num_id;
-            if k!=len(input)-1:
+            if k!=len(input)-1 or not has_blank:
                 output.append(self.word2id[word])
         _output=Variable(torch.LongTensor(output)).cuda()
         return output,self.Emb(_output)
@@ -206,9 +206,19 @@ class matching_net_nlp(nn.Module):
 
     def __init__(self,num_ways):
         super(matching_net_nlp, self).__init__()
-        self.emb = MyEmbedding(10000,50)
-        self.envlstm = EnvLSTM(50,1000,100)
-        self.lstm = LSTM(num_ways,100,1000,200)
+        self.emb = MyEmbedding(13000,100)
+        self.envlstm = EnvLSTM(100,500,100)
+        self.lstm = LSTM(num_ways,100,200,100)
+        
+    def forward_quick(self, support_set):
+        # support_set list: batch_size *  {list of word}
+        loss=Variable(torch.FloatTensor([0])).cuda()
+        for i in range(len(support_set)):
+            id,emb=self.emb(support_set[i],False,False)
+            env=self.envlstm(emb)
+            for k in range(len(support_set[i])):
+                loss+=Variable(torch.FloatTensor([1])).cuda()-env[k].dot(emb[k]) * torch.rsqrt(env[k].dot(env[k])*emb[k].dot(emb[k]))
+        return loss/Variable(torch.FloatTensor([len(support_set)])).cuda()
         
     def forward(self, support_set, target,fce=False):
         # support_set list : batch_size * sequence_size * {list of word including answer and blank} 
@@ -218,7 +228,7 @@ class matching_net_nlp(nn.Module):
         for j in range(len(support_set[0])):
             _support_set.append([])
             for i in range(len(support_set)):
-                id,emb=self.emb(support_set[i][j],use_blank=False)
+                id,emb=self.emb(support_set[i][j],False,True)
                 env=self.envlstm(emb)
                 blank_env=0
                 for k in range(len(support_set[i][j])):
@@ -230,7 +240,7 @@ class matching_net_nlp(nn.Module):
         _target=[]
         target_y=[]
         for i in range(len(target)):
-            id,emb=self.emb(target[i],use_blank=False)
+            id,emb=self.emb(target[i],False,True)
             env=self.envlstm(emb)
             blank_env=0
             for k in range(len(target[i])):
@@ -260,7 +270,7 @@ class matching_net_nlp(nn.Module):
             x = x[0:len(x) - 1]
         z = []
         for i in range(len(support_set[0])):
-            z.append(x[i].unsqueeze(1).bmm(y.unsqueeze(2)) * torch.rsqrt(x[i].unsqueeze(1).bmm(x[i].unsqueeze(2))))
+            z.append(x[i].unsqueeze(1).bmm(y.unsqueeze(2)) * torch.rsqrt(x[i].unsqueeze(1).bmm(x[i].unsqueeze(2))*y.unsqueeze(1).bmm(y.unsqueeze(2))))
 
         z = torch.stack(z).squeeze(-1).squeeze(-1).t()
         output = F.softmax(z, dim=1)
