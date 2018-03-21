@@ -205,9 +205,9 @@ class matching_net_nlp(nn.Module):
 
     def __init__(self,num_ways):
         super(matching_net_nlp, self).__init__()
-        self.emb = MyEmbedding(13000,200)
-        self.envlstm = EnvLSTM(200,500,200)
-        self.lstm = LSTM(num_ways,200,500,200)
+        self.emb = MyEmbedding(13000,300)
+        self.envlstm = EnvLSTM(300,500,300)
+        self.lstm = LSTM(num_ways,300,500,300)
         
     def forward_quick(self, support_set):
         # support_set list: batch_size *  {list of word}
@@ -218,10 +218,10 @@ class matching_net_nlp(nn.Module):
             env=self.envlstm(emb)
             emb=torch.stack(emb)
             env=torch.stack(env)
-            x=env.unsqueeze(1).bmm(emb.unsqueeze(2)) * torch.rsqrt(env.unsqueeze(1).bmm(env.unsqueeze(2))*emb.unsqueeze(1).bmm(emb.unsqueeze(2)))
+            x=(F.cosine_similarity(env,emb)-1)*10
             loss-=torch.sum(x)
             totlen+=len(support_set[i])
-        return 1.0+loss/totlen
+        return loss/totlen
         
         
     def forward(self, support_set, target,fce):
@@ -271,7 +271,7 @@ class matching_net_nlp(nn.Module):
             x = x[0:len(x) - 1]
         z = []
         for i in range(len(support_set[0])):
-            z.append(x[i].unsqueeze(1).bmm(y.unsqueeze(2)) * torch.rsqrt(x[i].unsqueeze(1).bmm(x[i].unsqueeze(2))*y.unsqueeze(1).bmm(y.unsqueeze(2)))*10)
+            z.append(F.cosine_similarity(x[i],y)*10)
         z = torch.stack(z).squeeze(-1).squeeze(-1).t()
         output = F.softmax(z, dim=1)
         values, indices = output.max(1)

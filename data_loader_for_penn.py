@@ -5,16 +5,21 @@ import numpy as np
 from random import shuffle
 from random import randint
 from copy import deepcopy
+from nltk.corpus import stopwords
 
 class PTB():
     def __init__(self):
         nltk.download('treebank')
+        nltk.download('stopwords')
         ids = nltk.corpus.treebank.fileids()
         self.sents=[]
         for id in ids:
             self.sents+=list(treebank.sents(id))
         self.wc={}
+        
+        stop_words = set(stopwords.words('english'))
         for i in range(len(self.sents)):
+            self.sents[i]=[word for word in self.sents[i] if word[0]!='*']
             for j in range(len(self.sents[i])):
                 if not self.sents[i][j] in self.wc:
                     self.wc[self.sents[i][j]]=[]
@@ -22,7 +27,7 @@ class PTB():
         self.word_set=[]
         frequency = 10
         for i in self.wc:
-            if len(self.wc[i])>= frequency and i.isalpha():
+            if len(self.wc[i])>= frequency and i.isalpha() and not i in stop_words:
                 self.word_set.append(i)
         self.n=len(self.word_set)
         self.n_s=len(self.word_set)

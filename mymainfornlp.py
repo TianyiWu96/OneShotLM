@@ -60,7 +60,19 @@ def QuickTrain(total_batches):
 data=PTB()
 data.build_experiment()  
 
+st=data.get_batch_sentences(1)
+print(' '.join(st[0]))
+st1,st2=data.get_batch(1,5,0)
+for i in st1[0]:
+    print(' '.join(i))
+print(' '.join(st2[0]))
+
+
 for e in range(total_epochs):
+    if total_train_batches1>50:
+        total_train_batches1-=50
+        if (e%5)==4:
+            total_train_batches2+=50
     total_c_loss=QuickTrain(total_train_batches1)
     print("Train: Epoch ",e,": loss=",total_c_loss)
     total_c_loss,total_accuracy=RunBatch(total_train_batches2,True)
