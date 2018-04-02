@@ -9,7 +9,11 @@ Here is the documentation for the project:
 
 1. Project proposal [here](https://www.sharelatex.com/read/fmgnkxvwgjvb)  
 2. Progress report [here](https://www.sharelatex.com/read/hjxfxgxqtchq)
-3. Related Works 
+3. Final presentation [here](https://docs.google.com/presentation/d/1iM5_H_vas3rqgHgaQisSgf9kv68r1-PmaSej2ybvIYw/edit?usp=sharing)
+4. Final report [here] (https://www.sharelatex.com/read/kvbrhcdpwffn)
+
+----------------------------------------------------------------------------------------------------------------------
+Related Works 
   * One Shot Model (MN): [One Shot Matching Network](https://arxiv.org/abs/1606.04080)  
   * LSTM enc-dec model for language translation: [Sequence to Sequence LSTM](https://arxiv.org/abs/1409.3215)  
   * RNN enc-dec for phrase translation:[Phrase Representations using RNN Encoder-Decoder for SMT](https://arxiv.org/abs/1406.1078)  
@@ -17,12 +21,13 @@ Here is the documentation for the project:
   * attLSTM: [Attention-based Neural Machine Translation](https://arxiv.org/abs/1508.04025)  
 
 
-4. Other Resources
+Other Resources
 
   * Really good slides for [One Shot Language Learning](http://www.cl.uni-heidelberg.de/courses/ss16/cllrl/slides/one-shot-learning.pdf)  
   * One Shot Image Caption paper: [Language Learning at meta-learning](http://metalearning.ml/papers/metalearn17_andreas.pdf) 
   * Reference code for Matching Network:[here](https://github.com/BoyuanJiang/matching-networks-pytorch)
-5. Group Responsibilities
+
+Group Responsibilities
 
   * Tianyi Wu:  NLP
   * Yuan Gao:  NLP
