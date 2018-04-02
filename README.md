@@ -10,7 +10,7 @@ Here is the documentation for the project:
 1. Project proposal [here](https://www.sharelatex.com/read/fmgnkxvwgjvb)  
 2. Progress report [here](https://www.sharelatex.com/read/hjxfxgxqtchq)
 3. Final presentation [here](https://docs.google.com/presentation/d/1iM5_H_vas3rqgHgaQisSgf9kv68r1-PmaSej2ybvIYw/edit?usp=sharing)
-4. Final report [here] (https://www.sharelatex.com/read/kvbrhcdpwffn)
+4. Final report [here](https://www.sharelatex.com/read/kvbrhcdpwffn)
 
 ----------------------------------------------------------------------------------------------------------------------
 Related Works 
